@@ -1,23 +1,23 @@
 {
-  "name": "42-connector",
-  "version": "1.0.0",
-  "description": "This Node module interfaces with the 42 API --> https://api.intra.42.fr",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/codam-coding-college/42-connector.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/codam-coding-college/42-connector/issues"
-  },
-  "homepage": "https://github.com/codam-coding-college/42-connector#readme",
-  "dependencies": {
-    "node-fetch": "^3.2.6",
-    "url-parameter-append": "^1.0.5"
-  }
+	"name": "42-connector",
+	"version": "1.0.0",
+	"description": "This Node module interfaces with the 42 API --> https://api.intra.42.fr",
+	"main": "build/main.js",
+	"scripts": {
+		"build": "tsc"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/codam-coding-college/42-connector.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/codam-coding-college/42-connector/issues"
+	},
+	"homepage": "https://github.com/codam-coding-college/42-connector#readme",
+	"dependencies": {
+		"node-fetch": "^3.2.6",
+		"url-parameter-append": "^1.0.5"
+	}
 }

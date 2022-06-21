@@ -1,7 +1,5 @@
 import fetch from 'node-fetch'
 import urlParameterAppend from 'url-parameter-append'
-import { env } from './env'
-
 
 interface AccessToken {
 	access_token: string
@@ -41,7 +39,7 @@ interface Response {
 	json: any | any[] | undefined
 }
 
-class API {
+export class API {
 	private _root: string
 	private _UID: string
 	private _secret: string

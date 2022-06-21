@@ -27,7 +27,8 @@
 		"preserveSymlinks": true,
 		"skipLibCheck": true,
 		// "sourceMap": true, //debugger
-		"forceConsistentCasingInFileNames": true
+		"forceConsistentCasingInFileNames": true,
+		"declaration": true,
 	},
 	"exclude": [
 		"node_modules/",

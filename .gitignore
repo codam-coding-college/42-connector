@@ -1,0 +1,9 @@
+__pycache__
+.DS_Store
+/token.*
+/.env
+/logs
+/corrector_logs
+/tmp.*
+/node_modules/
+/build

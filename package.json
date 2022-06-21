@@ -18,7 +18,7 @@
 	},
 	"homepage": "https://github.com/codam-coding-college/42-connector#readme",
 	"dependencies": {
-		"node-fetch": "^3.2.6",
+		"node-fetch": "^2.1.0",
 		"url-parameter-append": "^1.0.5"
 	}
 }

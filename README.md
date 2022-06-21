@@ -4,6 +4,10 @@ This Node module interfaces with the 42 API --> https://api.intra.42.fr
 ## Usage
 ### Installation
 `npm i --save https://github.com/codam-coding-college/42-connector.git`
+<br>
+or if you want a specific version:
+<br>
+`npm i --save https://github.com/codam-coding-college/42-connector.git#1.0.1`
 
 ### Code example
 ```typescript

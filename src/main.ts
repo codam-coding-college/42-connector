@@ -36,7 +36,8 @@ class RequestLimiter {
 
 interface Response {
 	ok: boolean
-	json: any | any[] | undefined
+	status?: number
+	json?: any | any[]
 }
 
 export class API {
@@ -85,8 +86,12 @@ export class API {
 			return await this._fetch(address, opt, isTokenUpdateRequest)
 		}
 		this._cooldown = this._startCooldown
-		const json = await response.json()
-		return { ok: true, json }
+		try {
+			const json = await response.json()
+			return { ok: true, status: response.status, json }
+		} catch (err) {
+			return { ok: false, status: response.status }
+		}
 	}
 
 	private async _updateToken() {
@@ -136,7 +141,7 @@ export class API {
 			const addressI = urlParameterAppend(address, { 'page[number]': i })
 			const response: Response = await this._fetch(addressI, {}, false)
 			if (!response.ok)
-				return { ok: false, json: items }
+				return { ok: false, status: response.status, json: items }
 			if (response.json.length === 0)
 				break
 			if (onPage)

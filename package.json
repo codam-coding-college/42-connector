@@ -4,7 +4,8 @@
 	"description": "This Node module interfaces with the 42 API --> https://api.intra.42.fr",
 	"main": "build/main.js",
 	"scripts": {
-		"build": "tsc"
+		"build": "tsc",
+		"install": "npm run build"
 	},
 	"repository": {
 		"type": "git",

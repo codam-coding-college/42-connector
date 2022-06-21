@@ -1,3 +1,3 @@
-import "src/main";
+import "src/main"
 
-declare module '42-connector';
+declare module '42-connector'

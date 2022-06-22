@@ -105,15 +105,17 @@ export class API {
 			response = await fetch(address, opt)
 		} catch (err) {
 			if (err.name === 'AbortError')
-				throw 'Request timed out'
-			throw err;
+				throw `Request to "${address}" timed out after ${this._timeout} ms`
+			throw err
 		} finally {
 			clearTimeout(timeout)
 		}
 
 		if (response.status === 429) {
-			if (Date.now() - startTime > this._timeout)
-				throw 'Request timed out'
+			const duration = Date.now() - startTime
+			if (duration > this._timeout)
+				throw `Request to "${address}" response is still 429 (Too Many Requests) after ${duration} ms, limit was ${this._timeout} ms`
+
 			this._log(`${new Date().toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
 			await new Promise(resolve => setTimeout(resolve, this._cooldown))
 			this._cooldown *= this._cooldownGrowthFactor

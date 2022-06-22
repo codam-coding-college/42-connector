@@ -1,6 +1,6 @@
 {
 	"name": "42-connector",
-	"version": "2.1.0",
+	"version": "3.0.0",
 	"description": "This Node module interfaces with the 42 API --> https://api.intra.42.fr",
 	"main": "build/main.js",
 	"scripts": {
@@ -21,7 +21,6 @@
 		"node-fetch": "^2.1.0",
 		"url-parameter-append": "^1.0.5",
 		"typescript": "^4.2.4"
-
 	},
 	"devDependencies": {
 		"@types/node-fetch": "^2.6.2"

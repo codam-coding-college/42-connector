@@ -189,8 +189,8 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async getPaged<T extends { length: number }>(path: string, onPage?: (response: Response<T>) => void): Promise<Response<T[]>> {
-		let items: T[] = []
+	async getPaged<T extends any[]>(path: string, onPage?: (response: Response<T>) => void): Promise<Response<T>> {
+		let items: T = [] as unknown as T
 
 		const address = `${this._root}${path}`
 		for (let i = 1; ; i++) {
@@ -204,7 +204,7 @@ export class API {
 				break
 			if (onPage)
 				onPage(response)
-			items = items.concat(response.json)
+			items = items.concat(response.json) as T
 		}
 		return { ok: false, json: items }
 	}

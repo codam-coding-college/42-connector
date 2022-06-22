@@ -20,8 +20,8 @@ const api = new API(clientUID, clientSecret, {
 	timeout: Infinity
 })
 
-const achievements: Response = await api.get('/v2/achievements')
-console.log(achievements.json)
+const response: Response = await api.get('/v2/achievements')
+console.log(response.json)
 
 const post_response: Response = await api.post('/v2/feedbacks', {
 	'feedback[comment]': 'Much good, such wow',

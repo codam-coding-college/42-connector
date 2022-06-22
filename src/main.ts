@@ -98,7 +98,7 @@ export class API {
 			const json = await response.json()
 			return { ok: true, status: response.status, json }
 		} catch (err) {
-			return { ok: false, status: response.status }
+			return { ok: response.ok, status: response.status }
 		}
 	}
 

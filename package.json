@@ -1,6 +1,6 @@
 {
 	"name": "42-connector",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "This Node module interfaces with the 42 API --> https://api.intra.42.fr",
 	"main": "build/main.js",
 	"scripts": {

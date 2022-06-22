@@ -1,4 +1,4 @@
-import fetch from 'node-fetch'
+import fetch, { RequestInit } from 'node-fetch'
 import urlParameterAppend from 'url-parameter-append'
 
 interface AccessToken {
@@ -51,8 +51,9 @@ export class API {
 	private _cooldown: number
 	private _cooldownGrowthFactor: number
 	private _limiter: RequestLimiter
+	private _timeout: number
 
-	constructor(clientUID: string, clientSecret: string, maxRequestPerSecond: number = 1 / 3, logging: boolean = false, root = 'https://api.intra.42.fr') {
+	constructor(clientUID: string, clientSecret: string, maxRequestPerSecond: number = 1 / 3, logging: boolean = false, root = 'https://api.intra.42.fr', timeout = 0) {
 		this._logging = logging
 		this._root = root
 		this._UID = clientUID
@@ -63,6 +64,7 @@ export class API {
 		this._cooldown = this._startCooldown
 		this._cooldownGrowthFactor = 2
 		this._limiter = new RequestLimiter(maxRequestPerSecond)
+		this._timeout = timeout
 	}
 
 	private _log(...args: any[]) {
@@ -70,11 +72,9 @@ export class API {
 			console.log(...args)
 	}
 
-	private async _fetch(address: string, opt: any, isTokenUpdateRequest: boolean, timeout: number, startDate?: Date): Promise<Response> {
-		if (!startDate)
-			startDate = new Date()
+	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<ApiResponse> {
 		if (!isTokenUpdateRequest) {
-			await this._updateToken(timeout, startDate)
+			await this._updateToken()
 			if (!opt.headers)
 				opt.headers = {}
 			opt.headers['Authorization'] = `Bearer ${this._accessToken!.access_token}`
@@ -85,13 +85,13 @@ export class API {
 		await this._limiter.limit()
 		const response = await fetch(address, opt)
 		if (response.status === 429) {
-			const currentDate = new Date()
-			if (currentDate.getTime() - startDate.getTime() - this._cooldown > timeout)
-				throw "Timeout reached"
-			this._log(`${currentDate.toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
+			const currentTime = new Date()
+			if (currentTime.getTime() - startTime.getTime() > this._timeout)
+				throw 'Request timed out'
+			this._log(`${currentTime.toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
 			await new Promise(resolve => setTimeout(resolve, this._cooldown))
 			this._cooldown *= this._cooldownGrowthFactor
-			return await this._fetch(address, opt, isTokenUpdateRequest, timeout, startDate)
+			return await this._fetch(address, opt, isTokenUpdateRequest, startTime)
 		}
 		this._cooldown = this._startCooldown
 		try {
@@ -102,7 +102,7 @@ export class API {
 		}
 	}
 
-	private async _updateToken(timeout: number, startDate: Date) {
+	private async _updateToken() {
 		if (this._accessTokenExpiry > Date.now() + 60 * 1000)
 			return
 		const opt = {
@@ -112,16 +112,16 @@ export class API {
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 		}
-		this._accessToken = (await this._fetch(`${this._root}/oauth/token`, opt, true, timeout, startDate)).json as AccessToken
+		this._accessToken = (await this._fetch(`${this._root}/oauth/token`, opt, true)).json as AccessToken
 		this._accessTokenExpiry = + Date.now() + this._accessToken!.expires_in * 1000
 		this._log(`[new token]: expires in ${this._accessToken!.expires_in} seconds, on ${new Date(this._accessTokenExpiry).toISOString()}`)
 	}
 
-	async get(path: string, timeout?: number): Promise<Response> {
-		return await this._fetch(`${this._root}${path}`, {}, false, timeout ?? Infinity)
+	async get(path: string): Promise<Response> {
+		return await this._fetch(`${this._root}${path}`, {}, false)
 	}
 
-	async post(path: string, body: Object, timeout?: number): Promise<Response> {
+	async post(path: string, body: Object): Promise<Response> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -129,10 +129,10 @@ export class API {
 			method: 'POST',
 			body: JSON.stringify(body)
 		}
-		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
+		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async patch(path: string, body: Object, timeout?: number): Promise<Response> {
+	async patch(path: string, body: Object): Promise<Response> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -140,10 +140,10 @@ export class API {
 			method: 'PATCH',
 			body: JSON.stringify(body)
 		}
-		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
+		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async put(path: string, body: Object, timeout?: number): Promise<Response> {
+	async put(path: string, body: Object): Promise<Response> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -151,24 +151,23 @@ export class API {
 			method: 'PUT',
 			body: JSON.stringify(body)
 		}
-		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
+		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async delete(path: string, timeout?: number): Promise<Response> {
+	async delete(path: string): Promise<Response> {
 		const opt = {
 			method: 'DELETE',
 		}
-		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
+		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-
-	async getPaged(path: string, onPage?: (response: any) => void, timeout?: number): Promise<Response> {
+	async getPaged(path: string, onPage?: (response: any) => void): Promise<Response> {
 		let items: any[] = []
 
 		const address = `${this._root}${path}`
 		for (let i = 1; ; i++) {
 			const addressI = urlParameterAppend(address, { 'page[number]': i })
-			const response: Response = await this._fetch(addressI, {}, false, timeout ?? Infinity)
+			const response: Response = await this._fetch(addressI, {}, false)
 			if (!response.ok)
 				return { ok: false, status: response.status, json: items }
 			if (response.json.length === 0)

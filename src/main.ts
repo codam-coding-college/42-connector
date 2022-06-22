@@ -53,7 +53,7 @@ export class API {
 	private _limiter: RequestLimiter
 	private _timeout: number
 
-	constructor(clientUID: string, clientSecret: string, maxRequestPerSecond: number = 1 / 3, logging: boolean = false, root = 'https://api.intra.42.fr', timeout = 0) {
+	constructor(clientUID: string, clientSecret: string, maxRequestPerSecond: number = 1 / 3, logging: boolean = false, root = 'https://api.intra.42.fr', timeout = Infinity) {
 		this._logging = logging
 		this._root = root
 		this._UID = clientUID

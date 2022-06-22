@@ -95,7 +95,7 @@ export class API {
 		}
 		this._cooldown = this._startCooldown
 		try {
-			const json = await response.json()
+			const json = await response.json() as T
 			return { ok: true, status: response.status, json }
 		} catch (err) {
 			return { ok: response.ok, status: response.status }

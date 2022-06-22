@@ -34,10 +34,10 @@ class RequestLimiter {
 	}
 }
 
-interface Response {
+interface Response<T = any | any[]> {
 	ok: boolean
 	status?: number
-	json?: any | any[]
+	json?: T
 }
 
 export class API {
@@ -72,7 +72,7 @@ export class API {
 			console.log(...args)
 	}
 
-	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<Response> {
+	private async _fetch<T>(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<Response<T>> {
 		if (!isTokenUpdateRequest) {
 			await this._updateToken()
 			if (!opt.headers)
@@ -117,11 +117,11 @@ export class API {
 		this._log(`[new token]: expires in ${this._accessToken!.expires_in} seconds, on ${new Date(this._accessTokenExpiry).toISOString()}`)
 	}
 
-	async get(path: string): Promise<Response> {
+	async get<T>(path: string): Promise<Response<T>> {
 		return await this._fetch(`${this._root}${path}`, {}, false)
 	}
 
-	async post(path: string, body: Object): Promise<Response> {
+	async post<T>(path: string, body: Object): Promise<Response<T>> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async patch(path: string, body: Object): Promise<Response> {
+	async patch<T>(path: string, body: Object): Promise<Response<T>> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async put(path: string, body: Object): Promise<Response> {
+	async put<T>(path: string, body: Object): Promise<Response<T>> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -154,22 +154,24 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async delete(path: string): Promise<Response> {
+	async delete<T>(path: string): Promise<Response<T>> {
 		const opt = {
 			method: 'DELETE',
 		}
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async getPaged(path: string, onPage?: (response: any) => void): Promise<Response> {
-		let items: any[] = []
+	async getPaged<T extends { length: number }>(path: string, onPage?: (response: Response<T>) => void): Promise<Response<T[]>> {
+		let items: T[] = []
 
 		const address = `${this._root}${path}`
 		for (let i = 1; ; i++) {
 			const addressI = urlParameterAppend(address, { 'page[number]': i })
-			const response: Response = await this._fetch(addressI, {}, false)
+			const response = await this._fetch<T>(addressI, {}, false)
 			if (!response.ok)
 				return { ok: false, status: response.status, json: items }
+			if (!response.json)
+				break
 			if (response.json.length === 0)
 				break
 			if (onPage)

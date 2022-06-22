@@ -65,6 +65,10 @@ export class API {
 		this._limiter = new RequestLimiter(maxRequestPerSecond)
 	}
 
+	private _log(...args: any[]) {
+		if (this._logging)
+			console.log(...args)
+	}
 
 	private async _fetch(address: string, opt: any, isTokenUpdateRequest: boolean, timeout: number, startDate?: Date): Promise<Response> {
 		if (!startDate)
@@ -76,8 +80,7 @@ export class API {
 			opt.headers['Authorization'] = `Bearer ${this._accessToken!.access_token}`
 		}
 
-		if (this._logging)
-			console.log(`${new Date().toISOString()} REQUEST ${address}, ${JSON.stringify(opt)}`)
+		this._log(`${new Date().toISOString()} REQUEST ${address}, ${JSON.stringify(opt)}`)
 
 		await this._limiter.limit()
 		const response = await fetch(address, opt)
@@ -85,8 +88,7 @@ export class API {
 			const currentDate = new Date()
 			if (currentDate.getTime() - startDate.getTime() - this._cooldown > timeout)
 				throw "Timeout reached"
-			if (this._logging)
-				console.log(`${currentDate.toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
+			this._log(`${currentDate.toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
 			await new Promise(resolve => setTimeout(resolve, this._cooldown))
 			this._cooldown *= this._cooldownGrowthFactor
 			return await this._fetch(address, opt, isTokenUpdateRequest, timeout, startDate)
@@ -112,8 +114,7 @@ export class API {
 		}
 		this._accessToken = (await this._fetch(`${this._root}/oauth/token`, opt, true, timeout, startDate)).json as AccessToken
 		this._accessTokenExpiry = + Date.now() + this._accessToken!.expires_in * 1000
-		if (this._logging)
-			console.log(`[new token]: expires in ${this._accessToken!.expires_in} seconds, on ${new Date(this._accessTokenExpiry).toISOString()}`)
+		this._log(`[new token]: expires in ${this._accessToken!.expires_in} seconds, on ${new Date(this._accessTokenExpiry).toISOString()}`)
 	}
 
 	async get(path: string, timeout?: number): Promise<Response> {
@@ -126,6 +127,28 @@ export class API {
 				'Content-Type': 'application/json',
 			},
 			method: 'POST',
+			body: JSON.stringify(body)
+		}
+		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
+	}
+
+	async patch(path: string, body: Object, timeout?: number): Promise<Response> {
+		const opt = {
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			method: 'PATCH',
+			body: JSON.stringify(body)
+		}
+		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
+	}
+
+	async put(path: string, body: Object, timeout?: number): Promise<Response> {
+		const opt = {
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			method: 'PUT',
 			body: JSON.stringify(body)
 		}
 		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)

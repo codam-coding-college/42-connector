@@ -34,11 +34,19 @@ class RequestLimiter {
 	}
 }
 
-interface Response {
-	ok: boolean
-	status?: number
-	json?: any | any[]
+interface AnyObject {
+	[index: string]: any,
+	[index: number]: any,
+	[index: symbol]: any
 }
+
+type ApiResponse = AnyObject | any[]
+
+// interface Response {
+// 	ok: boolean
+// 	status?: number
+// 	json?: AnyObject | any[]
+// }
 
 export class API {
 	private _root: string
@@ -72,7 +80,7 @@ export class API {
 			console.log(...args)
 	}
 
-	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<Response> {
+	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<ApiResponse> {
 		if (!isTokenUpdateRequest) {
 			await this._updateToken()
 			if (!opt.headers)
@@ -95,10 +103,9 @@ export class API {
 		}
 		this._cooldown = this._startCooldown
 		try {
-			const json = await response.json()
-			return { ok: true, status: response.status, json }
+			return await response.json()
 		} catch (err) {
-			return { ok: response.ok, status: response.status }
+			throw 'Received malformed json'
 		}
 	}
 
@@ -112,16 +119,16 @@ export class API {
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 		}
-		this._accessToken = (await this._fetch(`${this._root}/oauth/token`, opt, true)).json as AccessToken
+		this._accessToken = await this._fetch(`${this._root}/oauth/token`, opt, true) as AccessToken
 		this._accessTokenExpiry = + Date.now() + this._accessToken!.expires_in * 1000
 		this._log(`[new token]: expires in ${this._accessToken!.expires_in} seconds, on ${new Date(this._accessTokenExpiry).toISOString()}`)
 	}
 
-	async get(path: string): Promise<Response> {
+	async get(path: string): Promise<ApiResponse> {
 		return await this._fetch(`${this._root}${path}`, {}, false)
 	}
 
-	async post(path: string, body: Object): Promise<Response> {
+	async post(path: string, body: Object): Promise<ApiResponse> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -132,7 +139,7 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async patch(path: string, body: Object): Promise<Response> {
+	async patch(path: string, body: Object): Promise<ApiResponse> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -143,7 +150,7 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async put(path: string, body: Object): Promise<Response> {
+	async put(path: string, body: Object): Promise<ApiResponse> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -154,28 +161,26 @@ export class API {
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async delete(path: string): Promise<Response> {
+	async delete(path: string): Promise<ApiResponse> {
 		const opt = {
 			method: 'DELETE',
 		}
 		return await this._fetch(`${this._root}${path}`, opt, false)
 	}
 
-	async getPaged(path: string, onPage?: (response: any) => void): Promise<Response> {
+	async getPaged(path: string, onPage?: (response: any) => void): Promise<ApiResponse> {
 		let items: any[] = []
 
 		const address = `${this._root}${path}`
 		for (let i = 1; ; i++) {
 			const addressI = urlParameterAppend(address, { 'page[number]': i })
-			const response: Response = await this._fetch(addressI, {}, false)
-			if (!response.ok)
-				return { ok: false, status: response.status, json: items }
-			if (response.json.length === 0)
+			const response: ApiResponse = await this._fetch(addressI, {}, false)
+			if (response.length === 0)
 				break
 			if (onPage)
 				onPage(response)
-			items = items.concat(response.json)
+			items = items.concat(response)
 		}
-		return { ok: false, json: items }
+		return items
 	}
 }

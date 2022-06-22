@@ -13,7 +13,12 @@ or if you want a specific version:
 ```typescript
 import { API } from '42-connector'
 
-const api = new API(clientUID, clientSecret, maxRequestPerSecond, logging, root)
+const api = new API(clientUID, clientSecret, {
+	maxRequestPerSecond: 1 / 3,
+	logging: false,
+	root: 'https://api.intra.42.fr',
+	timeout: Infinity
+})
 
 const achievements: Response = await api.get('/v2/achievements')
 console.log(achievements.json)

@@ -85,7 +85,7 @@ export class API {
 			console.log(...args)
 	}
 
-	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<Response> {
+	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = Date.now()): Promise<Response> {
 		if (!isTokenUpdateRequest) {
 			await this._updateToken()
 			if (!opt.headers)
@@ -96,12 +96,25 @@ export class API {
 		this._log(`${new Date().toISOString()} REQUEST ${address}, ${JSON.stringify(opt)}`)
 
 		await this._limiter.limit()
-		const response = await fetch(address, opt)
-		if (response.status === 429) {
-			const currentTime = new Date()
-			if (currentTime.getTime() - startTime.getTime() > this._timeout)
+		const controller = new AbortController()
+		// @ts-ignore
+		opt.signal = controller.signal
+		const timeout = setTimeout(() => controller.abort(), this._timeout - (Date.now() - startTime))
+		let response: Response
+		try {
+			response = await fetch(address, opt)
+		} catch (err) {
+			if (err.name === 'AbortError')
 				throw 'Request timed out'
-			this._log(`${currentTime.toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
+			throw err;
+		} finally {
+			clearTimeout(timeout)
+		}
+
+		if (response.status === 429) {
+			if (Date.now() - startTime > this._timeout)
+				throw 'Request timed out'
+			this._log(`${new Date().toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
 			await new Promise(resolve => setTimeout(resolve, this._cooldown))
 			this._cooldown *= this._cooldownGrowthFactor
 			return await this._fetch(address, opt, isTokenUpdateRequest, startTime)

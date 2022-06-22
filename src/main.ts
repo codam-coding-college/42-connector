@@ -72,7 +72,7 @@ export class API {
 			console.log(...args)
 	}
 
-	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<ApiResponse> {
+	private async _fetch(address: string, opt: RequestInit, isTokenUpdateRequest: boolean, startTime = new Date()): Promise<Response> {
 		if (!isTokenUpdateRequest) {
 			await this._updateToken()
 			if (!opt.headers)

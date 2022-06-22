@@ -40,31 +40,44 @@ interface Response {
 	json?: any | any[]
 }
 
+interface Options {
+	maxRequestPerSecond?: number
+	logging?: boolean
+	root?: string
+	timeout?: number
+}
+
 export class API {
-	private _root: string
 	private _UID: string
 	private _secret: string
-	private _accessToken: AccessToken | null
+	private _limiter: RequestLimiter
 	private _logging: boolean
+	private _root: string
+	private _timeout: number
+
+	private _accessToken: AccessToken | null
 	private _accessTokenExpiry: number
 	private _startCooldown: number
 	private _cooldown: number
 	private _cooldownGrowthFactor: number
-	private _limiter: RequestLimiter
-	private _timeout: number
 
-	constructor(clientUID: string, clientSecret: string, maxRequestPerSecond: number = 1 / 3, logging: boolean = false, root = 'https://api.intra.42.fr', timeout = Infinity) {
-		this._logging = logging
-		this._root = root
+	constructor(
+		clientUID: string,
+		clientSecret: string,
+		options?: Options
+	) {
 		this._UID = clientUID
 		this._secret = clientSecret
+		this._limiter = new RequestLimiter(options?.maxRequestPerSecond ?? 1 / 3)
+		this._logging = options?.logging ?? false
+		this._root = options?.root ?? 'https://api.intra.42.fr'
+		this._timeout = options?.timeout ?? Infinity
+
 		this._accessToken = null
 		this._accessTokenExpiry = -1
 		this._startCooldown = 1500
 		this._cooldown = this._startCooldown
 		this._cooldownGrowthFactor = 2
-		this._limiter = new RequestLimiter(maxRequestPerSecond)
-		this._timeout = timeout
 	}
 
 	private _log(...args: any[]) {

@@ -65,9 +65,12 @@ export class API {
 		this._limiter = new RequestLimiter(maxRequestPerSecond)
 	}
 
-	private async _fetch(address: string, opt: any, isTokenUpdateRequest: boolean): Promise<Response> {
+
+	private async _fetch(address: string, opt: any, isTokenUpdateRequest: boolean, timeout: number, startDate?: Date): Promise<Response> {
+		if (!startDate)
+			startDate = new Date()
 		if (!isTokenUpdateRequest) {
-			await this._updateToken()
+			await this._updateToken(timeout, startDate)
 			if (!opt.headers)
 				opt.headers = {}
 			opt.headers['Authorization'] = `Bearer ${this._accessToken!.access_token}`
@@ -79,11 +82,14 @@ export class API {
 		await this._limiter.limit()
 		const response = await fetch(address, opt)
 		if (response.status === 429) {
+			const currentDate = new Date()
+			if (currentDate.getTime() - startDate.getTime() - this._cooldown > timeout)
+				throw "Timeout reached"
 			if (this._logging)
-				console.log(`${new Date().toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
+				console.log(`${currentDate.toISOString()} [fetch error]: status: ${response?.status} body: ${JSON.stringify(response)} retrying in ${this._cooldown / 1000} seconds`)
 			await new Promise(resolve => setTimeout(resolve, this._cooldown))
 			this._cooldown *= this._cooldownGrowthFactor
-			return await this._fetch(address, opt, isTokenUpdateRequest)
+			return await this._fetch(address, opt, isTokenUpdateRequest, timeout, startDate)
 		}
 		this._cooldown = this._startCooldown
 		try {
@@ -94,7 +100,7 @@ export class API {
 		}
 	}
 
-	private async _updateToken() {
+	private async _updateToken(timeout: number, startDate: Date) {
 		if (this._accessTokenExpiry > Date.now() + 60 * 1000)
 			return
 		const opt = {
@@ -104,17 +110,17 @@ export class API {
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 		}
-		this._accessToken = (await this._fetch(`${this._root}/oauth/token`, opt, true)).json as AccessToken
+		this._accessToken = (await this._fetch(`${this._root}/oauth/token`, opt, true, timeout, startDate)).json as AccessToken
 		this._accessTokenExpiry = + Date.now() + this._accessToken!.expires_in * 1000
 		if (this._logging)
 			console.log(`[new token]: expires in ${this._accessToken!.expires_in} seconds, on ${new Date(this._accessTokenExpiry).toISOString()}`)
 	}
 
-	async get(path: string): Promise<Response> {
-		return await this._fetch(`${this._root}${path}`, {}, false)
+	async get(path: string, timeout?: number): Promise<Response> {
+		return await this._fetch(`${this._root}${path}`, {}, false, timeout ?? Infinity)
 	}
 
-	async post(path: string, body: Object): Promise<Response> {
+	async post(path: string, body: Object, timeout?: number): Promise<Response> {
 		const opt = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -122,24 +128,24 @@ export class API {
 			method: 'POST',
 			body: JSON.stringify(body)
 		}
-		return await this._fetch(`${this._root}${path}`, opt, false)
+		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
 	}
 
-	async delete(path: string): Promise<Response> {
+	async delete(path: string, timeout?: number): Promise<Response> {
 		const opt = {
 			method: 'DELETE',
 		}
-		return await this._fetch(`${this._root}${path}`, opt, false)
+		return await this._fetch(`${this._root}${path}`, opt, false, timeout ?? Infinity)
 	}
 
 
-	async getPaged(path: string, onPage?: (response: any) => void): Promise<Response> {
+	async getPaged(path: string, onPage?: (response: any) => void, timeout?: number): Promise<Response> {
 		let items: any[] = []
 
 		const address = `${this._root}${path}`
 		for (let i = 1; ; i++) {
 			const addressI = urlParameterAppend(address, { 'page[number]': i })
-			const response: Response = await this._fetch(addressI, {}, false)
+			const response: Response = await this._fetch(addressI, {}, false, timeout ?? Infinity)
 			if (!response.ok)
 				return { ok: false, status: response.status, json: items }
 			if (response.json.length === 0)

@@ -71,7 +71,7 @@ export class API {
 		this._limiter = new RequestLimiter(options?.maxRequestPerSecond ?? 1 / 3)
 		this._logging = options?.logging ?? false
 		this._root = options?.root ?? 'https://api.intra.42.fr'
-		this._timeout = options?.timeout ?? Infinity
+		this._timeout = options?.timeout ?? 2147483647
 
 		this._accessToken = null
 		this._accessTokenExpiry = -1
@@ -199,13 +199,12 @@ export class API {
 			if (!response.ok)
 				return { ok: false, status: response.status, json: items }
 			if (!response.json)
-				break
+				return { ok: false, status: response.status, json: items }
 			if (response.json.length === 0)
-				break
+				return { ok: true, status: response.status, json: items }
 			if (onPage)
 				onPage(response)
 			items = items.concat(response.json) as T
 		}
-		return { ok: false, json: items }
 	}
 }
